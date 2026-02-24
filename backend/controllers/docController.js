@@ -55,7 +55,7 @@ exports.getDocumentById = async (req, res) => {
   }
 };
 
-// Generate a shareable link and "send" an email
+// Generate a shareable link, log the action, and return the link
 exports.shareDocument = async (req, res) => {
   try {
     const { id } = req.params;
@@ -72,20 +72,18 @@ exports.shareDocument = async (req, res) => {
 
     // Generate a special signing token valid for 7 days
     const signToken = jwt.sign({ documentId: id, email }, process.env.JWT_SECRET, { expiresIn: '7d' });
-    const signLink = `http://localhost:5173/sign/${signToken}`;
-
-    // MOCK EMAIL SENDING
-    console.log('\n===================================================');
-    console.log('✉️  MOCK EMAIL SENT');
-    console.log(`To: ${email}`);
-    console.log(`Subject: Action Required - Please sign your document: ${document.title}`);
-    console.log(`Body: You have been requested to sign a document.`);
-    console.log(`Click here to view and sign: ${signLink}`);
-    console.log('===================================================\n');
+    
+    // FIX: Dynamically use the production Vercel URL or fallback to localhost
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    
+    // REMOVE trailing slash if it accidentally exists in the ENV var, then append the route
+    const cleanFrontendUrl = frontendUrl.replace(/\/$/, '');
+    const signLink = `${cleanFrontendUrl}/sign/${signToken}`;
 
     // Log the sharing action
     await logAudit(document._id, 'Document Shared', req.user.id, req.ip);
 
+    // Return the generated link to the frontend
     res.status(200).json({ 
       message: 'Document shared successfully', 
       link: signLink 
@@ -95,7 +93,7 @@ exports.shareDocument = async (req, res) => {
   }
 };
 
-// NEW: Verify public token and fetch document for external signers
+// Verify public token and fetch document for external signers
 exports.getPublicDocument = async (req, res) => {
   try {
     const { token } = req.params;
