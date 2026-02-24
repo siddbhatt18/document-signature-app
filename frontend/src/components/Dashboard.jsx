@@ -64,14 +64,21 @@ const Dashboard = ({ token }) => {
     if (!email) return;
 
     try {
+      // 1. Make the API call to generate the link
       const response = await api.post(`/docs/${docId}/share`, { email }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      toast.success(`Shareable link generated! Check backend terminal.`);
+      
+      // 2. Automatically copy the returned link to the user's clipboard
+      await navigator.clipboard.writeText(response.data.link);
+      
+      // 3. Show a success toast letting them know it's copied!
+      toast.success(`Link copied to clipboard! You can now paste it anywhere.`);
+      
       fetchDocuments(); 
     } catch (error) {
       console.error('Error sharing document', error);
-      toast.error('Failed to share document');
+      toast.error('Failed to share document. Please try again.');
     }
   };
 
